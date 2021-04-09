@@ -101,7 +101,7 @@
 		<button id="fontup">SIZE +</button>
 		<button id="fontdown"> SIZE -</button>
 		<button id="fullscreen"> FULLSCREEN</button>
-		<input type="range" value = "0" min = "0" max = "100" id="speed">
+		<input type="range" value = "0" min = "0" max = "600" id="speed">
 		
 	
 	</div><div id="text2"><div id='text' contenteditable="true">
@@ -311,7 +311,7 @@ November 19, 1863
 			else { //else, pixels per 10ms is >1, pixels per step is >1, step time is scaled
 				
 				pixels = Math.ceil(pixelsPerSecond/100); // round to next integer because we can't do subpixels
-				ms = 10 * ((pixelsPerSecond/100)/pixels); //scale time so that pixels/s is the right number
+				ms = 10 * (pixels/(pixelsPerSecond/100)); //scale time so that pixels/s is the right number
 			}
 		
 			text.scrollTop += pixels;
