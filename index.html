@@ -1,0 +1,351 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>The Only Good Teleprompter</title>
+  <style>
+		#buttonbar {
+			display: inline-block;
+			width: 5vw;
+			height: 100vh;
+			background-color: grey;
+			vertical-align:top;
+			position:relative;
+			float:left;
+		}
+		
+		.hidden{
+			display:none !important;
+		}
+		
+		#collapse {
+			float:left;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 2%;
+			height: 100%;
+			background-color: dimgrey;
+			vertical-align:top;
+			position:relative;
+		}
+		
+		#text {
+			
+			width: 100%;
+			height:100%;
+			background-color: black;
+			color: white;
+			
+			font-size: 10px;
+			overflow-y: scroll;
+			scroll-behavior: auto;
+			
+		}
+		
+		#text2 {
+			height: 100%;
+			vertical-align:top;
+			overflow:hidden;
+			scroll-behavior: auto;
+			position: relative;
+			top:0px;
+		}
+		
+		#speed{
+			transform-origin: left;
+			transform: rotate(270deg);
+			position: absolute;
+			top: 70vh;
+			left: 2.5vw;
+			width:30vh;
+			height:5vw;
+		}
+		
+		#container{
+			width:100vw;
+			height:100vh;
+			margin:0px;
+			overflow:hidden;
+		}
+		
+		button{
+			background-color:dimgrey;
+			height:5vh;
+			width:5vw;
+		}
+		
+		.pressed{
+			background-color:red;
+		}
+		
+		body{
+			margin:0px;
+			overflow:hidden;
+		}
+		
+		*[contenteditable="true"]{display: inline-block;}
+		
+  </style> 
+ 
+</head>
+
+<body>
+<div id="container">
+	<div id='buttonbar'>
+		<button id="play">PLAY</button>
+		<button id="pause">PAUSE</button>
+		<button id="record">REC</button>
+		<button id="flip">FLIP</button>
+		<button id="fontup">SIZE +</button>
+		<button id="fontdown"> SIZE -</button>
+		<button id="fullscreen"> FULLSCREEN</button>
+		<input type="range" value = "0" min = "0" max = "100" id="speed">
+		
+	
+	</div><div id="text2"><div id='text' contenteditable="true">
+	
+	Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
+
+Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
+
+But, in a larger sense, we can not dedicate -- we can not consecrate -- we can not hallow -- this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract. The world will little note, nor long remember what we say here, but it can never forget what they did here. It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced. It is rather for us to be here dedicated to the great task remaining before us -- that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion -- that we here highly resolve that these dead shall not have died in vain -- that this nation, under God, shall have a new birth of freedom -- and that government of the people, by the people, for the people, shall not perish from the earth.
+
+Abraham Lincoln
+November 19, 1863
+
+
+
+	
+		
+	
+	</div>
+	</div>
+</div>
+	
+	<script type="text/javascript">
+		var flipped = false;
+		var text = document.getElementById("text");
+		var fontSize = 20;
+		var recordStartTime = 0;
+		var speedRecord = [];
+		var recording = false;
+		var playing = false;
+		var scrollSpeed = 0;
+		var pixelsPerSecond = 0;
+		var scrollInterval;
+		var doRecordTimer;
+		
+		var scrollTimeout;
+		
+		
+		text.style.fontSize = fontSize + "px";
+		
+		document.getElementById("buttonbar").addEventListener("click",(e)=>{buttons(e)});
+		
+		document.getElementById("speed").addEventListener("input",(e)=>{changeSpeed(e)});
+		
+		document.addEventListener("keydown", keyControl);
+		
+		function buttons(e){
+			if(e.target.tagName != "BUTTON"){
+				return;
+			}
+			
+			switch(e.target.id) {
+				case "flip":
+					flipped =! flipped;
+					var x;
+					if(flipped){
+						x = -1;
+					}
+					
+					else {
+						x = 1;
+					}
+					text.style.transform = "scale("+ x +",1)";
+				break;
+				
+				case "fontup":
+					fontSize += 5;
+					text.style.fontSize = fontSize + "px";
+				break;
+				
+				case "fontdown":
+					fontSize -= 5;
+					text.style.fontSize = fontSize + "px";
+				break;
+				
+				case "record":
+					record();
+				break;
+				
+				case "play":
+					play();
+				break;
+				
+				case "pause":
+					pause();
+				break;
+				
+				case "fullscreen":
+					if(document.fullscreenElement){
+						document.exitFullscreen()
+					}
+					else{
+						document.body.requestFullscreen();
+					}
+				break;
+				
+			}
+		}
+		
+		function keyControl(e){
+			if(document.activeElement == text || e.code != "Space"){
+				return;
+			}
+			
+			if(playing){
+				pause();
+			}
+			else { play();}
+		
+		}
+		
+		function record(){
+			if(!recording){
+				recording = true;
+				recordStartTime = Date.now();
+				document.getElementById("record").classList.add("pressed");
+				startScroll();
+			}
+			else {
+				recording = false;
+				document.getElementById("record").classList.remove("pressed");
+			}
+		}
+		
+		function changeSpeed(e){
+			
+			if(recording && ( speedRecord.length == 0 || ((Date.now() - recordStartTime) > speedRecord[speedRecord.length-1][0] +50))){
+				speedRecord.push([Date.now() - recordStartTime,parseInt(e.target.value)]);
+			}
+			else {
+				pixelsPerSecond =  parseInt(e.target.value);
+			}
+		}
+		
+		function play(){
+			clearTimeout(doRecordTimer);
+			if(speedRecord.length != 0){
+			
+				stepQueue(0);
+			}
+			
+			startScroll()
+			document.getElementById("play").classList.add("pressed");
+			playing = true;
+			
+		}
+		
+		function pause(){
+			clearTimeout(doRecordTimer);
+			clearTimeout(scrollTimeout);
+			
+			document.getElementById("play").classList.remove("pressed");
+			document.getElementById("speed").value = 0;
+			playing = false;
+			pixelsPerSecond = 0;
+		
+		}
+		
+		 function stepQueue(n){
+				if(n >= speedRecord.length){
+					clearTimeout(doRecordTimer);
+					return;
+				}
+		 
+				var time;
+				
+				if(n > 0){
+					time = speedRecord[n][0] - speedRecord[n-1][0];
+				}
+				
+				else{
+					time = speedRecord[n][0];
+				}
+				
+				document.getElementById("speed").value = speedRecord[n][1];
+				pixelsPerSecond = speedRecord[n][1];
+				doRecordTimer = setTimeout(()=>{
+					stepQueue(n+1);
+				
+				},time);
+		}
+		
+		function startScroll(){
+			clearTimeout(scrollTimeout);
+			text.style.scrollBehavior = "auto";
+			text.scrollTop = 0;
+			
+			var scroll = 0;
+			scrollT();
+		}
+		
+		function scrollT(){ // do the scroll
+			
+			var pixels;
+			var ms;
+			
+			if(pixelsPerSecond == 0){ //if pixelsPerSecond is 0, check back in 10 ms
+				scrollTimeout = setTimeout(scrollT,10);
+				return;
+			}
+			
+			if (pixelsPerSecond/100 <= 1){ //if pixels per 10ms is less than one, change time 
+				pixels = 1;
+				ms = 1000/pixelsPerSecond;
+				
+			}
+			else { //else, pixels per 10ms is >1, pixels per step is >1, step time is scaled
+				
+				pixels = Math.ceil(pixelsPerSecond/100); // round to next integer because we can't do subpixels
+				ms = 10 * ((pixelsPerSecond/100)/pixels); //scale time so that pixels/s is the right number
+			}
+		
+			text.scrollTop += pixels;
+			
+			if(text.scrollHeight - text.scrollTop == text.clientHeight){//if at the end, do stuff
+				pause();
+			} 
+			else scrollTimeout = setTimeout(scrollT,ms);
+		}
+	
+		var observer = new MutationObserver(observe);
+
+		function observe(mutations){
+			for(var mutation of mutations){
+				for(var node of mutation.addedNodes){
+					node.classlist = "";
+					if(node.attributes){
+						node.removeAttribute("style");
+					}
+					
+					if(node.nodeType != Node.TEXT_NODE && node.nodeName != "BR"){
+						if(node.textContent == ""){node.remove()}
+						else{
+							node.replaceWith(document.createTextNode(node.textContent));
+						}
+					}
+				}
+			}
+		}
+		
+		observer.observe(document.getElementById("text"),{childList:true,subtree:true});
+	
+	
+	</script>
+</body>
+
+</html>
